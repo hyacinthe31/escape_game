@@ -15,7 +15,7 @@ export function getSocket(): Socket {
     _socket = w.__socket as Socket;
   } else {
     const socketUrl =
-      process.env.NEXT_PUBLIC_SOCKET_URL || "https://escape-game-1.onrender.com";
+      process.env.NEXT_PUBLIC_SOCKET_URL || "http://localhost:4000";
     _socket = io(socketUrl, {
       transports: ["websocket"],
       autoConnect: true,

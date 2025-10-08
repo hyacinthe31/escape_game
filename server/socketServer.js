@@ -144,7 +144,10 @@ io.on("connection", (socket) => {
     addPenalty(io, sec);
   });
 
-
+  socket.on("pseudo_chosen", (data) => {
+    const { pseudo } = data;
+    socket.to("patient-1").emit("medic_pseudo", pseudo);
+  });
 
   socket.on("action", (data) => {
     socket.to(data.room).emit("update_state", data);

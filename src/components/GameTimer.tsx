@@ -1,39 +1,29 @@
 "use client";
 import { useEffect, useState } from "react";
-import { getSocket } from "@/lib/socket";
 
 export default function GameTimer() {
-  const socket = getSocket();
-  const [elapsed, setElapsed] = useState(0);
-  const [penalty, setPenalty] = useState<number | null>(null);
+  const [seconds, setSeconds] = useState(0);
 
   useEffect(() => {
-    socket.on("timer_update", (sec: number) => setElapsed(sec));
-    socket.on("timer_stop", (finalSec: number) => setElapsed(finalSec));
-    socket.on("timer_penalty", (sec: number) => {
-      setPenalty(sec);
-      setTimeout(() => setPenalty(null), 2000);
-    });
-    return () => {
-      socket.off("timer_update");
-      socket.off("timer_stop");
-      socket.off("timer_penalty");
-    };
-  }, [socket]);
+    const interval = setInterval(() => {
+      setSeconds((prev) => prev + 1);
+    }, 1000);
 
-  const minutes = Math.floor(elapsed / 60)
-    .toString()
-    .padStart(2, "0");
-  const seconds = (elapsed % 60).toString().padStart(2, "0");
+    return () => clearInterval(interval);
+  }, []);
+
+  // 🧩 Sauvegarde en continu pour le récupérer plus tard
+  useEffect(() => {
+    localStorage.setItem("totalTime", String(seconds));
+  }, [seconds]);
+
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
 
   return (
-    <div className="fixed top-4 right-4 bg-cyan-900/70 text-cyan-300 px-4 py-2 rounded-lg shadow-md font-mono text-lg">
-      ⏱️ {minutes}:{seconds}
-      {penalty && (
-        <span className="ml-2 text-red-400 font-bold animate-pulse">
-          +{penalty}s
-        </span>
-      )}
+    <div className="absolute top-4 right-4 bg-black/50 text-white px-4 py-2 rounded">
+      ⏱️ {mins}:{secs.toString().padStart(2, "0")}
     </div>
   );
 }
+
