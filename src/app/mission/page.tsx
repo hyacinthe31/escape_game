@@ -1,9 +1,15 @@
 "use client";
 import { useState } from "react";
-import BrainPuzzle from "@/components/BrainPuzzle";
-import HeartPuzzle from "@/components/HeartPuzzle";
-import LungsPuzzle from "@/components/LungsPuzzle";
-import GameTimer from "@/components/GameTimer";
+import dynamic from "next/dynamic";
+
+const BrainPuzzle = dynamic(() => import("@/components/BrainPuzzle"), { ssr: false });
+const HeartPuzzle = dynamic(() => import("@/components/HeartPuzzle"), { ssr: false });
+const LungsPuzzle = dynamic(() => import("@/components/LungsPuzzle"), { ssr: false });
+const GameTimer = dynamic(() => import("@/components/GameTimer"), { ssr: false });
+// import BrainPuzzle from "@/components/BrainPuzzle";
+// import HeartPuzzle from "@/components/HeartPuzzle";
+// import LungsPuzzle from "@/components/LungsPuzzle";
+// import GameTimer from "@/components/GameTimer";
 
 
 export default function Mission() {
@@ -68,8 +74,6 @@ export default function Mission() {
     </>
   );
 }
-
-export const dynamic = "force-dynamic";
 
 
 
