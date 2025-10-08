@@ -209,7 +209,7 @@ export default function HeartPuzzle({ onSolve }: { onSolve: () => void }) {
           <button
             onClick={validate}
             disabled={isSolved}
-            className={`mt-2 px-5 py-2 rounded-lg text-white font-semibold ${isSolved ? "bg-green-600 cursor-default" : "bg-cyan-600 hover:bg-cyan-700"}`}
+            className={`mt-2 px-5 py-2 rounded-lg cursor-pointer text-white font-semibold ${isSolved ? "bg-green-600 cursor-default" : "bg-cyan-600 hover:bg-cyan-700"}`}
           >
             {isSolved ? "✅ Validé" : "Valider"}
           </button>
