@@ -14,9 +14,11 @@ export function getSocket(): Socket {
   if (w.__socket) {
     _socket = w.__socket as Socket;
   } else {
-    _socket = io("http://localhost:4000", {
+    const socketUrl =
+      process.env.NEXT_PUBLIC_SOCKET_URL || "https://escape-game-1.onrender.com";
+    _socket = io(socketUrl, {
       transports: ["websocket"],
-      autoConnect: false,   // on connecte nous-mêmes
+      autoConnect: true,
       reconnection: true,
     });
     w.__socket = _socket;
