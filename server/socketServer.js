@@ -17,6 +17,7 @@ let globalTimer = {
   running: false,
 };
 
+// 🔹 Démarre le chrono global
 function startGlobalTimer(io) {
   if (globalTimer.running) return;
   globalTimer.startTime = Date.now();
@@ -26,23 +27,29 @@ function startGlobalTimer(io) {
     const elapsed = Math.floor((Date.now() - globalTimer.startTime) / 1000); // secondes
     io.emit("timer_update", elapsed);
   }, 1000);
+
+  console.log("⏱️ Timer global démarré");
 }
 
+// 🔹 Stoppe le chrono global
 function stopGlobalTimer(io) {
   if (!globalTimer.running) return;
   globalTimer.running = false;
   clearInterval(globalTimer.interval);
-  io.emit("timer_stop", Math.floor((Date.now() - globalTimer.startTime) / 1000));
+  const total = Math.floor((Date.now() - globalTimer.startTime) / 1000);
+  io.emit("timer_stop", total);
+  console.log(`⏹️ Timer global arrêté (temps final : ${total}s)`);
 }
 
+// 🔹 Ajoute une pénalité (recul du start → ajoute du temps)
 function addPenalty(io, seconds) {
   if (!globalTimer.running) return;
-  globalTimer.startTime -= seconds * 1000; // recule le start => ajoute du temps
+  globalTimer.startTime -= seconds * 1000;
   io.emit("timer_penalty", seconds);
+  console.log(`⚠️ +${seconds}s de pénalité appliquée`);
 }
 
-
-
+// ---- OUTILS EXISTANTS ----
 function generateNeurons() {
   return Array.from({ length: 16 }).map((_, i) => ({
     id: i + 1,
@@ -72,20 +79,22 @@ function ensureLungsMaze(roomObj) {
     "10110101011111111001",
     "11111111111111111111",
   ];
+
   const grid = layout.map(row => row.split("").map(c => (c === "1" ? 1 : 0)));
   const start = { x: 1, y: 1 };
-
-  // ✅ Choisir automatiquement 3 cases libres accessibles
   const freeCells = [];
+
   for (let y = 1; y < grid.length - 1; y++) {
     for (let x = 1; x < grid[0].length - 1; x++) {
       if (grid[y][x] === 0) freeCells.push({ x, y });
     }
   }
 
-  // Mélange aléatoire et choix de 3 positions
   const shuffled = freeCells.sort(() => Math.random() - 0.5);
-  const obstructions = shuffled.slice(0, 3).map((p, i) => ({ id: String.fromCharCode(65 + i), ...p }));
+  const obstructions = shuffled.slice(0, 3).map((p, i) => ({
+    id: String.fromCharCode(65 + i),
+    ...p,
+  }));
 
   const maze = {
     grid,
@@ -100,7 +109,10 @@ function ensureLungsMaze(roomObj) {
   return maze;
 }
 
+// ---- SOCKET.IO ----
 io.on("connection", (socket) => {
+  console.log("🧩 Nouveau joueur :", socket.id);
+
   socket.on("join_room", (room) => {
     if (!rooms[room]) {
       rooms[room] = {
@@ -110,11 +122,12 @@ io.on("connection", (socket) => {
         heartTarget: null,
       };
     }
+
     const r = rooms[room];
     r.players.add(socket.id);
     socket.join(room);
 
-    // Vérifie s’il a déjà un rôle
+    // Attribution des rôles
     let role = r.roles.get(socket.id);
     if (!role) {
       const rolesUsed = new Set(r.roles.values());
@@ -124,63 +137,63 @@ io.on("connection", (socket) => {
       r.roles.set(socket.id, role);
     }
 
-    r.roles.set(socket.id, role);
     socket.emit("role_assigned", role);
-
-    // envoie les neurones à tout le monde
     socket.emit("neurons_data", r.neurons);
 
-    const players = [...r.roles.values()].filter((v) => v === "medic" || v === "tech").length;
+    const players = [...r.roles.values()].filter(
+      (v) => v === "medic" || v === "tech"
+    ).length;
     io.to(room).emit("player_joined", { players });
 
     console.log(`Room ${room}: ${players} joueurs`);
   });
 
-  // 🕒 Démarre le timer global au moment où la première salle se crée
+  // 🕒 Démarre le chrono global au moment où la première salle se crée
   if (!globalTimer.running) startGlobalTimer(io);
 
-  socket.on("penalty_add", (sec = 5) => {
-    console.log(`⏱️ +${sec}s de pénalité`);
-    addPenalty(io, sec);
-  });
+  // ---- TIMER EVENTS ----
+  socket.on("timer_start_request", () => startGlobalTimer(io));
+  socket.on("timer_stop_request", () => stopGlobalTimer(io));
+  socket.on("penalty_add", (sec = 5) => addPenalty(io, sec));
 
-  socket.on("pseudo_chosen", (data) => {
-    const { pseudo } = data;
+  // ---- PSEUDO ----
+  socket.on("pseudo_chosen", ({ pseudo }) => {
     socket.to("patient-1").emit("medic_pseudo", pseudo);
   });
 
+  // ---- ACTIONS ----
   socket.on("action", (data) => {
     socket.to(data.room).emit("update_state", data);
   });
 
+  // ---- DÉCONNEXION ----
   socket.on("disconnect", () => {
     for (const [roomName, r] of Object.entries(rooms)) {
       if (r.players.delete(socket.id)) {
         r.roles.delete(socket.id);
-        const players = [...r.roles.values()].filter((v) => v === "medic" || v === "tech").length;
+        const players = [...r.roles.values()].filter(
+          (v) => v === "medic" || v === "tech"
+        ).length;
         io.to(roomName).emit("player_left", players);
+
         if (r.players.size === 0) {
           if (r.lungsSim?.timer) clearInterval(r.lungsSim.timer);
-           delete rooms[roomName];
+          delete rooms[roomName];
         }
       }
     }
   });
 
-    // Le médecin demande d'initialiser/obtenir la cible
+  // ---- CŒUR ----
   socket.on("heart_init", (room) => {
     if (!rooms[room]) return;
     const r = rooms[room];
     if (r.heartTarget == null) r.heartTarget = randomTargetBpm();
 
-    // On n’envoie le bpm cible QU’AU médecin
     const role = r.roles.get(socket.id);
-    if (role === "medic") {
-      socket.emit("heart_target", r.heartTarget);
-    }
+    if (role === "medic") socket.emit("heart_target", r.heartTarget);
   });
 
-  // Le technicien tente une validation
   socket.on("heart_validate", ({ room, bpm }) => {
     if (!rooms[room]) return;
     const r = rooms[room];
@@ -190,19 +203,17 @@ io.on("connection", (socket) => {
     if (ok) {
       io.to(room).emit("heart_solved");
     } else {
-      // réponse minimale ; on évite de donner des indices
       socket.emit("heart_wrong");
+      addPenalty(io, 5); // ⚠️ pénalité si mauvais BPM
     }
   });
 
-  // Initialisation de l'étape poumon obstrué
+  // ---- POUMONS ----
   socket.on("lungs3_init", (room) => {
     if (!rooms[room]) return;
     const r = rooms[room];
     const maze = ensureLungsMaze(r);
 
-    // Envoie le bootstrap à CE socket
-    // Le médecin voit tout ; le tech verra aussi tout mais côté client on n’affiche pas les obstructions.
     socket.emit("lungs3_bootstrap", {
       grid: maze.grid,
       start: maze.start,
@@ -212,7 +223,6 @@ io.on("connection", (socket) => {
       clearing: maze.clearing,
     });
 
-    // Broadcast de l’état à la room (utile quand qq rejoint en cours)
     io.to(room).emit("lungs3_state", {
       techPos: maze.techPos,
       cleared: Array.from(maze.cleared),
@@ -220,23 +230,22 @@ io.on("connection", (socket) => {
     });
   });
 
-  // Déplacement du technicien (WASD/flèches)
   socket.on("lungs3_move", ({ room, dir }) => {
     if (!rooms[room]) return;
     const r = rooms[room];
     const m = ensureLungsMaze(r);
 
-    const DIRS = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] };
+    const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
     const d = DIRS[dir];
     if (!d) return;
 
     const nx = m.techPos.x + d[0];
     const ny = m.techPos.y + d[1];
-    if (ny < 0 || ny >= m.grid.length || nx < 0 || nx >= m.grid[0].length) return;
-    if (m.grid[ny][nx] === 1) return; // mur
+    if (ny < 0 || ny >= m.grid.length || nx < 0 || nx >= m.grid[0].length)
+      return;
+    if (m.grid[ny][nx] === 1) return;
 
     m.techPos = { x: nx, y: ny };
-    // bouger annule un éventuel “maintien”
     m.clearing = null;
 
     io.to(room).emit("lungs3_state", {
@@ -246,7 +255,6 @@ io.on("connection", (socket) => {
     });
   });
 
-  // Maintien pour aspirer l’obstruction
   socket.on("lungs3_hold", ({ room, holding }) => {
     if (!rooms[room]) return;
     const r = rooms[room];
@@ -296,33 +304,24 @@ io.on("connection", (socket) => {
     m.cleared.add(here.id);
     m.clearing = null;
 
-    // ⚡ Premier broadcast immédiat
     io.to(room).emit("lungs3_state", {
       techPos: { ...m.techPos },
       cleared: Array.from(m.cleared),
       clearing: null,
     });
 
-    // 🧩 Deuxième broadcast de confirmation (pour sync tardive côté médecin)
-    setTimeout(() => {
-      io.to(room).emit("lungs3_state", {
-        techPos: { ...m.techPos },
-        cleared: Array.from(m.cleared),
-        clearing: null,
-      });
-
-      if (m.cleared.size >= m.obstructions.length) {
-        io.to(room).emit("lungs3_solved");
-        stopGlobalTimer(io);
-      }
-    }, 200);
+    // Check si tout est fini
+    if (m.cleared.size >= m.obstructions.length) {
+      io.to(room).emit("lungs3_solved");
+      stopGlobalTimer(io);
+    }
   });
-
-
 });
 
-const PORT = process.env.PORT || 4000;;
-server.listen(PORT, () => console.log(`✅ Socket server running on port ${PORT}`));
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () =>
+  console.log(`✅ Socket server running on port ${PORT}`)
+);
 
 
 

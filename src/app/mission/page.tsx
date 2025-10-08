@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 
@@ -14,6 +14,12 @@ export default function Mission() {
   const [currentOrgan, setCurrentOrgan] = useState<"brain" | "heart" | "lungs">("brain");
   const [solved, setSolved] = useState(false);
   const [isFinalStage, setIsFinalStage] = useState(false);
+  const [timerRunning, setTimerRunning] = useState(true);
+
+  useEffect(() => {
+    localStorage.removeItem("scoreSent");
+  }, []);
+
 
   const handleSolve = () => {
     setSolved(true);
@@ -22,6 +28,7 @@ export default function Mission() {
       else if (currentOrgan === "heart") setCurrentOrgan("lungs");
       else if (currentOrgan === "lungs") {
         // ✅ Fin de toutes les étapes
+        setTimerRunning(false);
         setIsFinalStage(true);
       }
       setSolved(false);
@@ -29,7 +36,12 @@ export default function Mission() {
   };
 
   const handleSendScore = async () => {
-    const role = localStorage.getItem("playerRole");
+    const alreadySent = localStorage.getItem("scoreSent");
+    if (alreadySent) {
+      console.log("⏩ Score déjà envoyé, on ignore.");
+      router.push(`/result?pseudo=${encodeURIComponent(localStorage.getItem("playerPseudo") || "Anonyme")}&time=${localStorage.getItem("totalTime") || "0"}`);
+      return;
+    }
 
     const pseudo = localStorage.getItem("playerPseudo") || "Anonyme";
     const time = parseInt(localStorage.getItem("totalTime") || "0", 10);
@@ -42,6 +54,7 @@ export default function Mission() {
       });
 
       if (res.ok) {
+        localStorage.setItem("scoreSent", "true");
         router.push(`/result?pseudo=${encodeURIComponent(pseudo)}&time=${time}`);
       } else {
         alert("⚠️ Erreur lors de l'enregistrement du score.");
@@ -53,7 +66,7 @@ export default function Mission() {
 
   return (
     <>
-      <GameTimer />
+      <GameTimer/>
       <main className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
         <h1 className="text-4xl font-bold mb-4">🧠 Dans le corps humain</h1>
 
