@@ -9,7 +9,7 @@ export default function ResultContent() {
   const time = params.get("time") || "0";
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-6">
+    <main className="min-h-screen flex flex-col items-center justify-center p-6">
       <h1 className="text-4xl font-bold mb-6">🏁 Résultats finaux</h1>
       <p className="text-xl mb-4">
         <b>{pseudo}</b>, ton temps final est :
