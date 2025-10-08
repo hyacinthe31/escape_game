@@ -69,4 +69,7 @@ export default function Mission() {
   );
 }
 
+export const dynamic = "force-dynamic";
+
+
 
