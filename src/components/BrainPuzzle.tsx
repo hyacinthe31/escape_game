@@ -97,7 +97,7 @@ export default function BrainPuzzle({ onSolve }: { onSolve: () => void }) {
       }
     } else {
       setFeedback("❌ Mauvaise connexion !");
-      socket.emit("penalty_add", 5);
+      socket.emit("penalty_add", 2);
     }
     setTimeout(() => setFeedback(null), 1000);
   };

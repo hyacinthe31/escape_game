@@ -35,7 +35,7 @@ export default function HeartPuzzle({ onSolve }: { onSolve: () => void }) {
       onSolve();
     });
     socket.on("heart_wrong", () => {
-      socket.emit("penalty_add", 5);
+      socket.emit("penalty_add", 2);
       setMsg("❌ Mauvaise valeur");
       setTimeout(() => setMsg(null), 800);
     });
