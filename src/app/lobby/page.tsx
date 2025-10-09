@@ -57,7 +57,7 @@ export default function Lobby() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen text-center p-6">
-      <h1 className="text-4xl font-bold mb-4">🧠 Inside the Human Body</h1>
+      <h1 className="text-4xl font-bold mb-4">🧠 A l'interieur du corps humain</h1>
       <p className="text-gray-400 mb-4">Joueurs connectés : {players}</p>
 
       {!role && <p>En attente du rôle...</p>}
