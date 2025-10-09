@@ -94,14 +94,14 @@ export default function Mission() {
             )}
 
             <div className="mt-8">
-              {solved && (
+              {/* {solved && (
                 <button
                   onClick={handleSolve}
                   className="px-4 py-2 bg-cyan-600 rounded-xl hover:bg-cyan-700 transition cursor-pointer"
                 >
                   Passer à l'étape suivante
                 </button>
-              )}
+              )} */}
               {!solved && (
                 <p className="text-gray-400 italic">
                   Résous l'étape pour continuer...
